@@ -114,9 +114,10 @@ function create(options=defaultOptions) {
 		});
 	}
 
-	function runHandlers(txt, tags) {
+	function runHandlers(txt, tags, params) {
 		return Promise.all(tags.map(tag=>{
-			return Promise.resolve(get(tag.tagName)(tag) || '').then(replacer=>{
+			let handler = get(tag.tagName).bind({}, tag);
+			return Promise.resolve(handler.apply({}, params) || '').then(replacer=>{
 				return {replacer, tag};
 			});
 		})).mapSeries(result=>{
@@ -124,10 +125,10 @@ function create(options=defaultOptions) {
 		}).then(()=>txt);
 	}
 
-	function parse(txt) {
+	function parse(txt, ...params) {
 		let tags = filterOverlappingTags(fixEndTags(txt, _parse(txt)));
 
-		return runHandlers(txt, tags).then(parsedTxt=>{
+		return runHandlers(txt, tags, params).then(parsedTxt=>{
 			if (txt !== parsedTxt) return parse(parsedTxt);
 			return parsedTxt;
 		});
