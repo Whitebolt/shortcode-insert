@@ -1,6 +1,7 @@
 'use strict';
 
 const Promise = require('bluebird');
+const _ = require('lodash');
 const defaultOptions = {start:'[[', end:']]'};
 const _getAttribute = new RegExp('(\\S+)\\s*=\\s*([\'"])(.*?)\\2|(\\S+)\\s*=\\s*(.*?)(?:\s|$)|(\\S+)(?:\s|$)', 'g');
 
@@ -41,24 +42,63 @@ function createRegEx(options) {
 	};
 }
 
+/**
+ * Create a new Shortcode parser instance.
+ *
+ * @public
+ * @param {Object} options		Options to create function.
+ * @returns {Object}			New instance of shortcode parser.
+ */
 function create(options=defaultOptions) {
 	const _options = Object.assign({}, defaultOptions, options);
 	const tags = new Map();
 	const finder = createRegEx(_options);
 
+	/**
+	 * Add a new handler to the parser.
+	 *
+	 * @public
+	 * @param name
+	 * @param handler
+	 * @param throwOnAlreadySet
+	 * @return {Function}
+	 */
 	function add(name, handler, throwOnAlreadySet=true) {
 		if (has(name) && throwOnAlreadySet) throw new Error(`Tag '${name}' already exists`);
+		if (!_.isFunction(handler)) throw new TypeError(`Cannot assign a non function as handler method for ${name}`);
 		tags.set(name, handler);
+		return get(name);
 	}
 
+	/**
+	 * Test if a given handler exists.
+	 *
+	 * @public
+	 * @param name
+	 * @returns {boolean}
+	 */
 	function has(name) {
 		return tags.has(name);
 	}
 
+	/**
+	 * Delete a given handler.
+	 *
+	 * @public
+	 * @param name
+	 * @returns {boolean}
+	 */
 	function _delete(name) {
 		return tags.delete(name);
 	}
 
+	/**
+	 * Get the given handler function.
+	 *
+	 * @public
+	 * @param name
+	 * @returns {Function}
+	 */
 	function get(name) {
 		if (!has(name)) throw new Error(`Tag '${name}' does not exist`);
 		return tags.get(name);
@@ -134,7 +174,7 @@ function create(options=defaultOptions) {
 		});
 	}
 
-	return {parse, add, has, delete:_delete, get}
+	return Object.freeze({parse, add, has, delete:_delete, get});
 }
 
 
