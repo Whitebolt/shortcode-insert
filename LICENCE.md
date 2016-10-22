@@ -1,6 +1,6 @@
-MIT License
+# MIT Licence
 
-Copyright (c) 2016 Stephen Simpson
+***Copyright (c) 2016 Whitebolt Ltd*** **<[http://whitebolt.net](http://whitebolt.net)>**
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
