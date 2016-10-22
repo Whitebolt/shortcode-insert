@@ -86,6 +86,56 @@ describe(describeItem(packageInfo), ()=>{
 				assert.throws(()=>parser.add('TEST', ()=>'HELLO2', true), Error);
 				assert.throws(()=>parser.add('TEST', ()=>'HELLO2', true), 'Tag \'TEST\' already exists');
 			});
+
+			it('add() should throw when trying to add a handler, which is not a function.', ()=>{
+				const parser = Shortcode.create();
+				assert.throws(()=>parser.add('TEST', 'HELLO'), TypeError);
+				assert.throws(()=>parser.add('TEST', 'HELLO'), 'Cannot assign a non function as handler method for \'TEST\'');
+			});
+		});
+
+		describe(describeItem(jsDoc, 'create~get'), ()=>{
+			it('get() should return requested handler.', ()=>{
+				const parser = Shortcode.create();
+				const handler = ()=>'HELLO';
+				parser.add('TEST', handler);
+
+				assert.isTrue(parser.has('TEST'));
+				assert.equal(parser.get('TEST'), handler);
+				assert.equal(parser.get('TEST')(), 'HELLO');
+			});
+
+			it('get() should throw if handler does not exist.', ()=>{
+				const parser = Shortcode.create();
+				assert.throws(()=>parser.get('TEST'), RangeError);
+				assert.throws(()=>parser.get('TEST'), 'Tag \'TEST\' does not exist');
+			});
+		});
+
+		describe(describeItem(jsDoc, 'create~has'), ()=>{
+			it('has() test if a handler exists for given tag name.', ()=>{
+				const parser = Shortcode.create();
+				parser.add('TEST', ()=>'HELLO');
+
+				assert.isTrue(parser.has('TEST'));
+				assert.isNotTrue(parser.has('TEST2'));
+			});
+		});
+
+		describe(describeItem(jsDoc, 'create~delete'), ()=>{
+			it('delete() should delete the handler for given tag name.', ()=>{
+				const parser = Shortcode.create();
+				parser.add('TEST', ()=>'HELLO');
+				assert.isTrue(parser.has('TEST'));
+				parser.delete('TEST');
+				assert.isNotTrue(parser.has('TEST'));
+			});
+
+			it('delete() should throw if tag name does not exist.', ()=>{
+				const parser = Shortcode.create();
+				assert.throws(()=>parser.get('TEST'), RangeError);
+				assert.throws(()=>parser.get('TEST'), 'Tag \'TEST\' does not exist');
+			});
 		});
 	});
 });

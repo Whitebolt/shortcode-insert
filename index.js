@@ -65,7 +65,7 @@ function create(options=defaultOptions) {
 	 */
 	function add(name, handler, throwOnAlreadySet=true) {
 		if (has(name) && throwOnAlreadySet) throw new Error(`Tag '${name}' already exists`);
-		if (!_.isFunction(handler)) throw new TypeError(`Cannot assign a non function as handler method for ${name}`);
+		if (!_.isFunction(handler)) throw new TypeError(`Cannot assign a non function as handler method for '${name}'`);
 		tags.set(name, handler);
 		return get(name);
 	}
@@ -85,10 +85,13 @@ function create(options=defaultOptions) {
 	 * Delete a given handler.
 	 *
 	 * @public
+	 * @name create~delete
+	 *
 	 * @param name
 	 * @returns {boolean}
 	 */
 	function _delete(name) {
+		if (!has(name)) throw new RangeError(`Tag '${name}' does not exist`);
 		return tags.delete(name);
 	}
 
@@ -100,7 +103,7 @@ function create(options=defaultOptions) {
 	 * @returns {Function}
 	 */
 	function get(name) {
-		if (!has(name)) throw new Error(`Tag '${name}' does not exist`);
+		if (!has(name)) throw new RangeError(`Tag '${name}' does not exist`);
 		return tags.get(name);
 	}
 
