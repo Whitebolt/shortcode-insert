@@ -4,8 +4,9 @@
   "description": "Shortcode parser",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "./bin/test"
   },
+  "engines": ">=6.0.0",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/ssimpo/shortcode-parser.git"
@@ -14,7 +15,20 @@
     "Shortcode",
     "RegEx"
   ],
-  "author": "Stephen Simpson <stephen@whitebolt.net>",
+  "author": {
+    "email": "hello@whitebolt.net",
+    "name": "Whitebolt"
+  },
+  "contributors": [
+    {
+      "email": "stephen@whitebolt.net",
+      "name": "Stephen Simpson"
+    },
+    {
+      "email": "kris@whitebolt.net",
+      "name": "Kristjan Allikas"
+    }
+  ],
   "license": "MIT",
   "bugs": {
     "url": "https://github.com/ssimpo/shortcode-parser/issues"
@@ -22,5 +36,10 @@
   "homepage": "https://github.com/ssimpo/shortcode-parser#readme",
   "dependencies": {
     "bluebird": "^3.4.6"
+  },
+  "devDependencies": {
+    "chai": "^3.3.0",
+    "jsdoc-parse": "^1.1.0",
+    "mocha": "^2.3.3"
   }
 }
