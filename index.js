@@ -47,7 +47,7 @@ function create(options=defaultOptions) {
 	const finder = createRegEx(_options);
 
 	function add(name, handler, throwOnAlreadySet=true) {
-		if (has(name)) throw new Error(`Tag '${name}' already exists`);
+		if (has(name) && throwOnAlreadySet) throw new Error(`Tag '${name}' already exists`);
 		tags.set(name, handler);
 	}
 
