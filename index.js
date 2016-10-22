@@ -3,20 +3,20 @@
 const Promise = require('bluebird');
 const _ = require('lodash');
 const defaultOptions = {start:'[[', end:']]'};
-const _getAttribute = new RegExp('(\\S+)\\s*=\\s*([\'"])(.*?)\\2|(\\S+)\\s*=\\s*(.*?)(?:\s|$)|(\\S+)(?:\s|$)', 'g');
+const _getAttributeRx = new RegExp('(\\S+)\\s*=\\s*([\'"])(.*?)\\2|(\\S+)\\s*=\\s*(.*?)(?:\s|$)|(\\S+)(?:\s|$)', 'g');
 
-function addSlashToEachCharacter(txt) {
+function _addSlashToEachCharacter(txt) {
 	return txt.split('').map(char=>'\\'+char).join('');
 }
 
-function getAttribute(getAttributes, tag) {
+function _getAttribute(getAttributes, tag) {
 	let results = getAttributes.exec(tag);
 
 	let attributes = {};
 	if (results) {
 		let result;
 		let count = 1;
-		while (result = _getAttribute.exec(results[1])) {
+		while (result = _getAttributeRx.exec(results[1])) {
 			if (!result[6] && (result[1]||result[4])) {
 				attributes[result[1]||result[4]] = result[3]||result[5];
 			} else if (result[6]) {
@@ -29,17 +29,44 @@ function getAttribute(getAttributes, tag) {
 	return attributes;
 }
 
-function createRegEx(options) {
-	let start = addSlashToEachCharacter(options.start);
-	let end = addSlashToEachCharacter(options.end);
+function _createRegEx(options) {
+	let start = _addSlashToEachCharacter(options.start);
+	let end = _addSlashToEachCharacter(options.end);
 	let _getAttributes = new RegExp(start+'.*?\\s(.*?)'+end);
 
 	return {
 		tagMatch: new RegExp(start+'.*?'+end, 'g'),
 		isEndTag: new RegExp('^'+start+'\/'),
 		getTagName: new RegExp(start+'(?:\/|)(.*?)(?:\\s|'+end+')'),
-		getAttributes: getAttribute.bind({}, _getAttributes)
+		getAttributes: _getAttribute.bind({}, _getAttributes)
 	};
+}
+
+function _fixEndTags(txt, tags) {
+	return tags.map((result, n)=>{
+		if (result.endTag) {
+			for (let nn=n; nn>=0; nn--) {
+				if ((tags[nn].tagName === result.tagName) && (!tags[nn].endTag)) {
+					tags[nn].content = txt.substring(tags[nn].end, result.start);
+					tags[nn].fullMatch += (tags[nn].content + result.fullMatch);
+					tags[nn].end = result.end;
+					tags[nn].selfClosing = false;
+				}
+			}
+		}
+		return result;
+	}).filter(result=>!result.endTag);
+}
+
+function _filterOverlappingTags(tags) {
+	return tags.filter((tag, n)=>{
+		if (n>0) {
+			for (let nn=(n-1); nn>=0; nn--) {
+				if (tags[nn].end > tag.start) return false;
+			}
+		}
+		return true;
+	});
 }
 
 /**
@@ -52,59 +79,17 @@ function createRegEx(options) {
 function create(options=defaultOptions) {
 	const _options = Object.assign({}, defaultOptions, options);
 	const tags = new Map();
-	const finder = createRegEx(_options);
+	const finder = _createRegEx(_options);
 
-	/**
-	 * Add a new handler to the parser.
-	 *
-	 * @public
-	 * @param name
-	 * @param handler
-	 * @param throwOnAlreadySet
-	 * @return {Function}
-	 */
-	function add(name, handler, throwOnAlreadySet=true) {
-		if (has(name) && throwOnAlreadySet) throw new Error(`Tag '${name}' already exists`);
-		if (!_.isFunction(handler)) throw new TypeError(`Cannot assign a non function as handler method for '${name}'`);
-		tags.set(name, handler);
-		return get(name);
-	}
-
-	/**
-	 * Test if a given handler exists.
-	 *
-	 * @public
-	 * @param name
-	 * @returns {boolean}
-	 */
-	function has(name) {
-		return tags.has(name);
-	}
-
-	/**
-	 * Delete a given handler.
-	 *
-	 * @public
-	 * @name create~delete
-	 *
-	 * @param name
-	 * @returns {boolean}
-	 */
-	function _delete(name) {
-		if (!has(name)) throw new RangeError(`Tag '${name}' does not exist`);
-		return tags.delete(name);
-	}
-
-	/**
-	 * Get the given handler function.
-	 *
-	 * @public
-	 * @param name
-	 * @returns {Function}
-	 */
-	function get(name) {
-		if (!has(name)) throw new RangeError(`Tag '${name}' does not exist`);
-		return tags.get(name);
+	function _runHandlers(txt, tags, params) {
+		return Promise.all(tags.map(tag=>{
+			let handler = exports.get(tag.tagName).bind({}, tag);
+			return Promise.resolve(handler.apply({}, params) || '').then(replacer=>{
+				return {replacer, tag};
+			});
+		})).mapSeries(result=>{
+			txt = txt.replace(result.tag.fullMatch, result.replacer);
+		}).then(()=>txt);
 	}
 
 	function _parse(txt) {
@@ -125,59 +110,72 @@ function create(options=defaultOptions) {
 				content: '',
 				selfClosing: true
 			}
-		}).filter(result=>has(result.tagName));
+		}).filter(result=>exports.has(result.tagName));
 
 		return results
 	}
 
-	function fixEndTags(txt, tags) {
-		return tags.map((result, n)=>{
-			if (result.endTag) {
-				for (let nn=n; nn>=0; nn--) {
-					if ((tags[nn].tagName === result.tagName) && (!tags[nn].endTag)) {
-						tags[nn].content = txt.substring(tags[nn].end, result.start);
-						tags[nn].fullMatch += (tags[nn].content + result.fullMatch);
-						tags[nn].end = result.end;
-						tags[nn].selfClosing = false;
-					}
-				}
-			}
-			return result;
-		}).filter(result=>!result.endTag);
-	}
+	const exports = {
+		/**
+		 * Add a new handler to the parser for given tag name.
+		 *
+		 * @public
+		 * @param {string} name							Tag name to set handler for.
+		 * @param {function} handler					Handler function to fire on tag.
+		 * @param {boolean} [throwOnAlreadySet=true]	Throw error if tage already exists?
+		 * @return {function}							The handler function returned.
+		 */
+		add: (name, handler, throwOnAlreadySet=true)=>{
+			if (exports.has(name) && throwOnAlreadySet) throw new Error(`Tag '${name}' already exists`);
+			if (!_.isFunction(handler)) throw new TypeError(`Cannot assign a non function as handler method for '${name}'`);
+			tags.set(name, handler);
+			return exports.get(name);
+		},
 
-	function filterOverlappingTags(tags) {
-		return tags.filter((tag, n)=>{
-			if (n>0) {
-				for (let nn=(n-1); nn>=0; nn--) {
-					if (tags[nn].end > tag.start) return false;
-				}
-			}
-			return true;
-		});
-	}
+		/**
+		 * Test if a handler for given tag name.
+		 *
+		 * @public
+		 * @param {string} name		The tag to look for a handler on.
+		 * @returns {boolean}		Does it exist?
+		 */
+		has: name=>tags.has(name),
 
-	function runHandlers(txt, tags, params) {
-		return Promise.all(tags.map(tag=>{
-			let handler = get(tag.tagName).bind({}, tag);
-			return Promise.resolve(handler.apply({}, params) || '').then(replacer=>{
-				return {replacer, tag};
+		/**
+		 * Delete the handler for given tag name.
+		 *
+		 * @public
+		 * @param {string} name		The tagname to delete the handler for.
+		 * @returns {boolean}
+		 */
+		delete: name=>{
+			if (!exports.has(name)) throw new RangeError(`Tag '${name}' does not exist`);
+			return tags.delete(name);
+		},
+
+		/**
+		 * Get the handler function for given tag name.
+		 *
+		 * @public
+		 * @param {string} name	 	Tag name to get the handler for.
+		 * @returns {function}		The handler for the given tag name.
+		 */
+		get: name=>{
+			if (!exports.has(name)) throw new RangeError(`Tag '${name}' does not exist`);
+			return tags.get(name);
+		},
+
+		parse: (txt, ...params)=>{
+			let tags = _filterOverlappingTags(_fixEndTags(txt, _parse(txt)));
+
+			return _runHandlers(txt, tags, params).then(parsedTxt=>{
+				if (txt !== parsedTxt) return exports.parse(parsedTxt);
+				return parsedTxt;
 			});
-		})).mapSeries(result=>{
-			txt = txt.replace(result.tag.fullMatch, result.replacer);
-		}).then(()=>txt);
-	}
+		}
+	};
 
-	function parse(txt, ...params) {
-		let tags = filterOverlappingTags(fixEndTags(txt, _parse(txt)));
-
-		return runHandlers(txt, tags, params).then(parsedTxt=>{
-			if (txt !== parsedTxt) return parse(parsedTxt);
-			return parsedTxt;
-		});
-	}
-
-	return Object.freeze({parse, add, has, delete:_delete, get});
+	return Object.freeze(exports);
 }
 
 
