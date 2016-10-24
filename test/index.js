@@ -292,7 +292,7 @@ describe(describeItem(packageInfo), ()=>{
 					parser.parse('[[TEST]] [[HELLO test="test"]]HELLO WORLD[[/HELLO]] [[MORE]][[/MORE]').then(()=>done());
 				});
 
-				it('ShortcodeParserTag supplied to handler will ahave correct selfColosing value.', done=>{
+				it('ShortcodeParserTag supplied to handler will have correct selfColosing value.', done=>{
 					// @todo actual self-closing tags not parsed correctly - ie [[TEST/]].
 
 					const parser = Shortcode();
@@ -302,6 +302,80 @@ describe(describeItem(packageInfo), ()=>{
 					parser.add('MORE', tag=>assert.isTrue(tag.selfClosing));
 
 					parser.parse('[[TEST]]TEST[[/TEST]] [[HELLO test="test"]] [[MORE]]').then(()=>done());
+				});
+
+				describe('Attributes are parsed and passed to handlers', ()=>{
+					it('ShortcodeParserTag supplied to handler parse attributes, with and without quotes.', done=>{
+						const parser = Shortcode();
+
+						parser.add('TEST', tag=>{
+							assert.equal(tag.attributes.test, 'TESTER');
+							assert.equal(tag.attributes.hello, 'Hello World!');
+							assert.equal(tag.attributes.more, 'Hello');
+							assert.equal(tag.attributes.evenmore, '"hello" WORLD');
+						});
+
+						parser.add('HELLO', tag=>{
+							assert.equal(tag.attributes.test, 'TESTER');
+							assert.equal(tag.attributes.hello, 'Hello World!');
+							assert.equal(tag.attributes.more, 'Hello');
+							assert.equal(tag.attributes.evenmore, '"hello" WORLD');
+						});
+
+						parser.add('MORE', tag=>{
+							assert.equal(tag.attributes.test, 'TESTER');
+							assert.equal(tag.attributes.hello, 'Hello World!');
+							assert.equal(tag.attributes.more, 'Hello');
+							assert.equal(tag.attributes.evenmore, '"hello" WORLD');
+						});
+
+						Promise.all(parser.parse(
+							'[[TEST test=\'TESTER\' hello="Hello World!" more=Hello evenmore=\'"hello" WORLD\']]'
+						), parser.parse(
+							'[[HELLO test=\'TESTER\' hello="Hello World!" more=Hello evenmore=\'"hello" WORLD\']]TEST[[/HELLO test2="TEST2"]]'
+						), parser.parse(
+							'[[OTHER]] [[MORE test=\'TESTER\' hello="Hello World!" more=Hello evenmore=\'"hello" WORLD\']]TEST[[/MORE]]'
+						)).then(()=>done())
+					});
+
+					it('ShortcodeParserTag supplied to handler parse attributes according to position.', done=> {
+						const parser = Shortcode();
+
+						parser.add('TEST', tag=>{
+							assert.deepEqual(tag.attributes[1], {test: 'TESTER'});
+							assert.deepEqual(tag.attributes[2], {hello: 'Hello World!'});
+							assert.deepEqual(tag.attributes[3], {more: 'Hello'});
+							assert.deepEqual(tag.attributes[4], {evenmore:'"hello" WORLD'});
+						});
+
+						parser.add('HELLO', tag=>{
+							assert.equal(tag.attributes[1], 'test');
+							assert.equal(tag.attributes[2], 'hello');
+						});
+
+						parser.add('OTHER', tag=>{
+							assert.equal(tag.attributes[1], 'test');
+							assert.equal(tag.attributes[2], 'hello');
+							assert.deepEqual(tag.attributes[3], {more: 'Hello'});
+						});
+
+						parser.add('MORE', tag=>{
+							assert.equal(tag.attributes[1], 'test');
+							assert.equal(tag.attributes[2], 'hello world');
+							assert.deepEqual(tag.attributes[3], {more: 'Hello'});
+							assert.equal(tag.attributes[4], 'HELLO');
+						});
+
+						Promise.all(parser.parse(
+							'[[TEST test=\'TESTER\' hello="Hello World!" more=Hello evenmore=\'"hello" WORLD\']]'
+						), parser.parse(
+							'[[HELLO test hello]]TEST[[/HELLO]]'
+						), parser.parse(
+							'[[OTHER test hello more=Hello]]TEST[[/OTHER]]'
+						), parser.parse(
+							'[[MORE test \'hello world\' more=Hello "HELLO"]]TEST[[/MORE]]'
+						)).then(()=>done());
+					});
 				});
 			});
 		});

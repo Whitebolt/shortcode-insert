@@ -4,7 +4,8 @@ const Promise = require('bluebird');
 const _ = require('lodash');
 const defaultOptions = {start:'[[', end:']]'};
 
-const xGetAttributes = new RegExp('(\\S+)\\s*=\\s*([\'"])(.*?)\\2|(\\S+)\\s*=\\s*(.*?)(?:\s|$)|(\\S+)(?:\s|$)', 'g');
+const xGetAttributes = new RegExp('(\\S+)\\s*=\\s*([\\\'\\"])(.*?)\\2|(\\S+)\\s*=\\s*(\\S+)|([^\\\'^\\"^\\s]+)(?:\\s|$)|([\\\'\\"])(.*?)\\7', 'g');
+
 const xGetTagAttributesText = '{start}.*?\\s(.*?){end}';
 const xTagMatch = '{start}.*?{end}';
 const xIsEndTag = '^{start}\/';
@@ -23,6 +24,8 @@ const xEnd = /\{end\}/g;
  * @property {Function} getAttributes	Method to extract the attributes in a
  * 										a given start tag string.
  */
+
+
 
 /**
  * Add slashes to every character in a string.  Can be used to ensure all of
@@ -59,9 +62,11 @@ function _getAttribute(getAttributes, tag) {
 		let count = 1;
 		while (result = xGetAttributes.exec(results[1])) {
 			if (!result[6] && (result[1]||result[4])) {
+				attributes[count] = {};
 				attributes[result[1]||result[4]] = result[3]||result[5];
-			} else if (result[6]) {
-				attributes[count] = result[6];
+				attributes[count][result[1]||result[4]] = result[3]||result[5];
+			} else if (result[6] || result[8]) {
+				attributes[count] = result[6]||result[8];
 			}
 			count++;
 		}
@@ -191,7 +196,7 @@ function ShortcodeParserTag(finder, result) {
 		attributes: finder.getAttributes(result[0]),
 		content: '',
 		selfClosing: true
-	}
+	};
 }
 
 /**
