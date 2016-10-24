@@ -12,11 +12,61 @@ const xGetTagName = '{start}(?:\/|)(.*?)(?:\\s|{end})';
 const xStart = /\{start\}/g;
 const xEnd = /\{end\}/g;
 
+/**
+ * @typedef ShortcodeParserFinder
+ * Regular expressions object to use in extracting tag and tag-attribute data.
+ *
+ * @property {RegExp} tagMatch			Expression for extracting a tag.
+ * @property {RegExp} isEndTag			Expression to test if a tag is an
+ * 										end tag
+ * @property {RegExp} getTagName		Expression to extract the tag name.
+ * @property {Function} getAttributes	Method to extract the attributes in a
+ * 										a given start tag string.
+ */
 
+/**
+ * @typedef ShortcodeParserTag
+ * Shortcode tag data.
+ *
+ * @property {string} tagName			The name of tag.
+ * @property {boolean} endTag			Is this an end tag.
+ * @property {string} fullMatch			The full tag text and content.
+ * @property {integer} start			Start character number in
+ * 										original text.
+ * @property {integer} end				end character number in
+ * 										original text.
+ * @property {object} attributes		The tag attributes as an object.
+ * @property {string} content			The content of tag when their is
+ * 										an opening and closing tag.
+ * @property {boolean} selfClosing		Is this a self-closing tag?
+ */
+
+/**
+ * Add slashes to every character in a string.  Can be used to ensure all of
+ * contents is treated as text and not used as regular expression functionality
+ * when creating a RegExp with the given content.
+ *
+ * @private
+ * @param {string} txt		The string to add slashes to.
+ * @returns {string}		New slashed string.
+ */
 function _addSlashToEachCharacter(txt) {
 	return txt.split('').map(char=>'\\'+char).join('');
 }
 
+/**
+ * Get the attributes in the given tag text. Will return an object of the tag
+ * attributes with properties being equal to their names and property values
+ * equalling their value. Also, assign numbered properties for attribute
+ * positions.
+ *
+ * @private
+ * @param {RegExp} getAttributes		The regular expression to use in getting
+ * 										the attributes.
+ * @param {string} tag					The tag text from open tag start
+ * 										and close.
+ * @returns {Object}					The attributes object.
+ */
 function _getAttribute(getAttributes, tag) {
 	let results = getAttributes.exec(tag);
 
@@ -37,13 +87,39 @@ function _getAttribute(getAttributes, tag) {
 	return attributes;
 }
 
-function _createRegExp(rx, start, end, options='') {
-	return new RegExp(rx
-		.replace(xStart, _addSlashToEachCharacter(start))
-		.replace(xEnd, _addSlashToEachCharacter(end)
+/**
+ * Safely create a regular expression from the given template with the given
+ * start and end characters replaced in the regular expression.
+ *
+ * @private
+ * @param {string} template			The regular expression template. The text
+ * 									{start} and {end} will be replaced with
+ * 									the given startChars and endChars.
+ * @param {string} startChars		Tag start characters.
+ * @param {string} endChars			Tag end characters.
+ * @param {string} [options='']		The regular expression options to
+ * 									use (eg. 'g' or 'gi').
+ * @returns {RegExp}
+ */
+function _createRegExp(template, startChars, endChars, options='') {
+	return new RegExp(template
+		.replace(xStart, _addSlashToEachCharacter(startChars))
+		.replace(xEnd, _addSlashToEachCharacter(endChars)
 	), options);
 }
 
+/**
+ * Get an object containing the regular expressions to use in extracting tag
+ * and tag-attribute data. Construct these expressions to work with the given
+ * start and end tag characters supplied in the options object.
+ *
+ * @private
+ * @param {object} options				The options object.
+ * @param {string} options.start		Start of tag characters.
+ * @param {string} options.end			End of tag characters.
+ * @returns {ShortcodeParserFinder}
+ *
+ */
 function _createRegExpsObj(options) {
 	return {
 		tagMatch: _createRegExp(xTagMatch, options.start, options.end, 'g'),
@@ -53,6 +129,16 @@ function _createRegExpsObj(options) {
 	};
 }
 
+/**
+ * Given an array of tags, remove end tags combining them with their start tag
+ * and placing tag content in the tag object.
+ *
+ * @private
+ * @param {string} txt					The text containing all the given tags.
+ * @param {Array} tags					Array of tag objects.
+ * @returns {ShortcodeParserTag[]}		New array with end tags removed and tag
+ * 										data updated with any tag content.
+ */
 function _fixEndTags(txt, tags) {
 	return tags.map((result, n)=>{
 		if (result.endTag) {
@@ -69,6 +155,13 @@ function _fixEndTags(txt, tags) {
 	}).filter(result=>!result.endTag);
 }
 
+/**
+ * @private
+ * Fix overlapping tags, removing tags inside tags
+ *
+ * @param {ShortcodeParserTag[]} tags	Tags to filter.
+ * @returns {ShortcodeParserTag[]}		Filtered tags.
+ */
 function _filterOverlappingTags(tags) {
 	return tags.filter((tag, n)=>{
 		if (n>0) {
