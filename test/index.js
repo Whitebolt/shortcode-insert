@@ -4,10 +4,14 @@
 
 'use strict';
 
+const Promise = require('bluebird');
 const packageInfo = require('../package.json');
 const jsDoc = require('./index.json');
 const Shortcode = require('../index.js');
-const assert = require('chai').assert;
+const chai = require('chai')
+const assert = chai.assert;
+
+chai.use(require("chai-as-promised"));
 
 
 /**
@@ -138,6 +142,31 @@ describe(describeItem(packageInfo), ()=>{
 				const parser = Shortcode();
 				assert.throws(()=>parser.get('TEST'), RangeError);
 				assert.throws(()=>parser.get('TEST'), 'Tag \'TEST\' does not exist');
+			});
+		});
+
+		describe(describeItem(jsDoc, 'ShortcodeParser.parse'), ()=>{
+			it('parse() should return a promise a bluebird promise.', ()=>{
+				const parser = Shortcode();
+				assert.instanceOf(parser.parse(''), Promise);
+			});
+
+			it('parse() should return the original text when no handlers fired.', ()=>{
+				const parser = Shortcode();
+				assert.eventually.equal(parser.parse('TEST'), 'TEST');
+			});
+
+			it('parse() should pass parameters to handlers.', done=>{
+				const parser = Shortcode();
+
+				parser.add('TEST', (...params)=>{
+					assert.lengthOf(params, 4);
+					assert.equal(params[1], 'A');
+					assert.equal(params[2], 'B');
+					assert.equal(params[3], 'C');
+				});
+
+				parser.parse('[[TEST]]', 'A', 'B', 'C').then(()=>done());
 			});
 		});
 	});
