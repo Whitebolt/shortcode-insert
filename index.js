@@ -25,23 +25,6 @@ const xEnd = /\{end\}/g;
  */
 
 /**
- * @typedef ShortcodeParserTag
- * Shortcode tag data.
- *
- * @property {string} tagName			The name of tag.
- * @property {boolean} endTag			Is this an end tag.
- * @property {string} fullMatch			The full tag text and content.
- * @property {integer} start			Start character number in
- * 										original text.
- * @property {integer} end				end character number in
- * 										original text.
- * @property {object} attributes		The tag attributes as an object.
- * @property {string} content			The content of tag when their is
- * 										an opening and closing tag.
- * @property {boolean} selfClosing		Is this a self-closing tag?
- */
-
-/**
  * Add slashes to every character in a string.  Can be used to ensure all of
  * contents is treated as text and not used as regular expression functionality
  * when creating a RegExp with the given content.
@@ -105,7 +88,7 @@ function _createRegExp(template, startChars, endChars, options='') {
 	return new RegExp(template
 		.replace(xStart, _addSlashToEachCharacter(startChars))
 		.replace(xEnd, _addSlashToEachCharacter(endChars)
-	), options);
+		), options);
 }
 
 /**
@@ -114,6 +97,7 @@ function _createRegExp(template, startChars, endChars, options='') {
  * start and end tag characters supplied in the options object.
  *
  * @private
+ * @class ShortcodeParserFinder
  * @param {object} options				The options object.
  * @param {string} options.start		Start of tag characters.
  * @param {string} options.end			End of tag characters.
@@ -174,6 +158,80 @@ function _filterOverlappingTags(tags) {
 }
 
 /**
+ * @typedef ShortcodeParserTag.
+ * @property {string} tagName			The name of tag.
+ * @property {boolean} endTag			Is this an end tag.
+ * @property {string} fullMatch			The full tag text and content.
+ * @property {integer} start			Start character number in
+ * 										original text.
+ * @property {integer} end				end character number in
+ * 										original text.
+ * @property {object} attributes		The tag attributes as an object.
+ * @property {string} content			The content of tag when their is
+ * 										an opening and closing tag.
+ * @property {boolean} selfClosing		Is this a self-closing tag?
+ */
+
+/**
+ * Create new tag object, describing extracted tag.
+ *
+ * @private
+ * @class ShortcodeParserTag
+ * @param {ShortcodeParserFinder} finder	Finder object to apply.
+ * @param {ShortcodeParserFinder} result	Results of tag extraction.
+ * @returns {ShortcodeParserTag}			New tag object.
+ */
+function ShortcodeParserTag(finder, result) {
+	return {
+		tagName: finder.getTagName.exec(result[0])[1],
+		endTag: finder.isEndTag.test(result[0]),
+		fullMatch: result[0],
+		end: result.lastIndex,
+		start: result.lastIndex - result[0].length,
+		attributes: finder.getAttributes(result[0]),
+		content: '',
+		selfClosing: true
+	}
+}
+
+/**
+ * Extract tag strings from given text, return regular expression matches
+ * (with some addtional data, such as lastIndex).
+ *
+ * @private
+ * @param {string} txt						Text to extract tags from.
+ * @param {ShortcodeParserFinder} finder	Finder object to apply.
+ * @returns {Array}							Results array.
+ */
+function _extractTagStrings(txt, finder) {
+	let results = [];
+	let result;
+	while (result = finder.tagMatch.exec(txt)) {
+		result.lastIndex = finder.tagMatch.lastIndex;
+		results.push(result);
+	}
+	return results;
+}
+
+/**
+ * Parse string for tags that handlers have been added for. Return tags that
+ * can be parsed.
+ *
+ * @private
+ * @param {string} txt						Text to parse for tags.
+ * @param {ShortcodeParserFinder} finder	Finder object to apply.
+ * @param {ShortcodeParser} parserInstance  The parser instance.
+ * @returns {ShortcodeParserTag[]}			Tags which can be handled.
+ */
+function _parse(txt, finder, parserInstance) {
+	return _extractTagStrings(txt, finder).map(
+		result=>ShortcodeParserTag(finder, result)
+	).filter(
+		result=>parserInstance.has(result.tagName)
+	);
+}
+
+/**
  * Create a new Shortcode parser instance.
  *
  * @class
@@ -182,9 +240,8 @@ function _filterOverlappingTags(tags) {
  * @returns {ShortcodeParser}	New instance of shortcode parser.
  */
 function ShortcodeParser(options=defaultOptions) {
-	const _options = Object.assign({}, defaultOptions, options);
 	const tags = new Map();
-	const finder = _createRegExpsObj(_options);
+	const finder = _createRegExpsObj(Object.assign({}, defaultOptions, options));
 
 	/**
 	 * Run set handlers for given tags, replacing text content as the handler
@@ -208,37 +265,6 @@ function ShortcodeParser(options=defaultOptions) {
 		})).mapSeries(result=>{
 			txt = txt.replace(result.tag.fullMatch, result.replacer);
 		}).then(()=>txt);
-	}
-
-	/**
-	 * Parse string for tags that handlers have been added for. Return tags that
-	 * can be parsed.
-	 *
-	 * @private
-	 * @param {string} txt					Text to parse for tags.
-	 * @returns {ShortcodeParserTag[]}		Tags which can be handled.
-	 */
-	function _parse(txt) {
-		let results = [];
-		let result;
-		while (result = finder.tagMatch.exec(txt)) {
-			result.lastIndex = finder.tagMatch.lastIndex;
-			results.push(result);
-		}
-		results = results.map(result=>{
-			return {
-				tagName: finder.getTagName.exec(result[0])[1],
-				endTag: finder.isEndTag.test(result[0]),
-				fullMatch: result[0],
-				end: result.lastIndex,
-				start: result.lastIndex - result[0].length,
-				attributes: finder.getAttributes(result[0]),
-				content: '',
-				selfClosing: true
-			}
-		}).filter(result=>exports.has(result.tagName));
-
-		return results
 	}
 
 	const exports = {
@@ -307,10 +333,10 @@ function ShortcodeParser(options=defaultOptions) {
 		 * 									parsed text.
 		 */
 		parse: (txt, ...params)=>{
-			let tags = _filterOverlappingTags(_fixEndTags(txt, _parse(txt)));
+			let tags = _filterOverlappingTags(_fixEndTags(txt, _parse(txt, finder, exports)));
 
 			return _runHandlers(txt, tags, params).then(parsedTxt=>{
-				if (txt !== parsedTxt) return exports.parse(parsedTxt);
+				if (txt !== parsedTxt) return exports.parse(parsedTxt, finder, exports);
 				return parsedTxt;
 			});
 		}
