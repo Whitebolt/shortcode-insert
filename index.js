@@ -186,6 +186,19 @@ function ShortcodeParser(options=defaultOptions) {
 	const tags = new Map();
 	const finder = _createRegExpsObj(_options);
 
+	/**
+	 * Run set handlers for given tags, replacing text content as the handler
+	 * return content.
+	 *
+	 * @private
+	 * @param {string} txt					The full text containing the tags to
+	 * 										do the replacements on.
+	 * @param {ShortcodeParserTag[]} tags	The tags to run handlers on.
+	 * @param {Array} params				The parameters to pass on to the
+	 * 										tag handlers.
+	 * @returns {Promise.<string>}			Promise resolving on completion of
+	 * 										tag replacements.
+	 */
 	function _runHandlers(txt, tags, params) {
 		return Promise.all(tags.map(tag=>{
 			let handler = exports.get(tag.tagName).bind({}, tag);
@@ -197,6 +210,14 @@ function ShortcodeParser(options=defaultOptions) {
 		}).then(()=>txt);
 	}
 
+	/**
+	 * Parse string for tags that handlers have been added for. Return tags that
+	 * can be parsed.
+	 *
+	 * @private
+	 * @param {string} txt					Text to parse for tags.
+	 * @returns {ShortcodeParserTag[]}		Tags which can be handled.
+	 */
 	function _parse(txt) {
 		let results = [];
 		let result;
@@ -274,6 +295,17 @@ function ShortcodeParser(options=defaultOptions) {
 			return tags.get(name);
 		},
 
+		/**
+		 * Parse given text for tags, running handlers where handlers are
+		 * defined and returning parsed text.
+		 *
+		 * @public
+		 * @memberof ShortcodeParser
+		 * @param {string} txt				Text to parse.
+		 * @param {Array} [params=[]]		Parameters to pass to the handlers.
+		 * @returns {Promise.<string>}		Promise resolving to new
+		 * 									parsed text.
+		 */
 		parse: (txt, ...params)=>{
 			let tags = _filterOverlappingTags(_fixEndTags(txt, _parse(txt)));
 
