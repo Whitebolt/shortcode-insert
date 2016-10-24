@@ -156,6 +156,35 @@ describe(describeItem(packageInfo), ()=>{
 				assert.eventually.equal(parser.parse('TEST'), 'TEST');
 			});
 
+			it('parse() will fire handler for tag embeded in text to parse.', done=>{
+				const parser = Shortcode();
+
+				parser.add('TEST', tag=>assert.equal(tag.tagName, 'TEST'));
+
+				parser.add('OTHER', ()=>
+					assert.fail('[[TEST]]', '[[OTHER]]', 'Handlers should only fire if present in text.')
+				);
+
+				parser.parse('[[TEST]]').then(()=>done());
+			});
+
+			it('parse() will fire handler for different tags in text.', done=>{
+				const parser = Shortcode();
+				let testCount = 0;
+
+				parser.add('TEST', tag=>{
+					testCount++;
+					assert.equal(tag.tagName, 'TEST')
+				});
+				parser.add('HELLO', tag=>assert.equal(tag.tagName, 'HELLO'));
+
+
+				parser.parse('[[TEST]] [[HELLO]] [[TEST]]').then(()=>{
+					assert.equal(testCount, 2);
+					done()
+				});
+			});
+
 			it('parse() should pass parameters to handlers.', done=>{
 				const parser = Shortcode();
 
@@ -167,6 +196,113 @@ describe(describeItem(packageInfo), ()=>{
 				});
 
 				parser.parse('[[TEST]]', 'A', 'B', 'C').then(()=>done());
+			});
+
+			describe('ShortcodeParserTag is supplied to handler', ()=>{
+				it('parse() will fire handler for tag supplying it with ShortcodeParserTag object.', done=>{
+					const parser = Shortcode();
+
+					parser.add('TEST', tag=>{
+						assert.property(tag, 'tagName');
+						assert.isString(tag.tagName);
+
+						assert.property(tag, 'endTag');
+						assert.isBoolean(tag.endTag);
+
+						assert.property(tag, 'fullMatch');
+						assert.isString(tag.fullMatch);
+
+						assert.property(tag, 'end');
+						assert.isNumber(tag.end);
+
+						assert.property(tag, 'start');
+						assert.isNumber(tag.start);
+
+						assert.property(tag, 'attributes');
+						assert.isObject(tag.attributes);
+
+						assert.property(tag, 'content');
+						assert.isString(tag.content);
+
+						assert.property(tag, 'selfClosing');
+						assert.isBoolean(tag.selfClosing);
+					});
+
+
+					parser.parse('[[TEST]]').then(()=>done());
+				});
+
+				it('ShortcodeParserTag supplied to handler will have correct tag name.', done=>{
+					const parser = Shortcode();
+
+					parser.add('TEST', tag=>assert.equal(tag.tagName, 'TEST'));
+					parser.add('HELLO', tag=>assert.equal(tag.tagName, 'HELLO'));
+					parser.add('MORE', tag=>assert.equal(tag.tagName, 'MORE'));
+
+					parser.parse('[[TEST]] [[HELLO]] [[MORE]]').then(()=>done());
+				});
+
+				it('ShortcodeParserTag supplied to handler will have correct endTag value.', done=>{
+					const parser = Shortcode();
+
+					parser.add('TEST', tag=>assert.isFalse(tag.endTag));
+					parser.add('HELLO', tag=>assert.isFalse(tag.endTag));
+					parser.add('MORE', tag=>assert.isFalse(tag.endTag));
+
+					parser.parse('[[TEST]] [[HELLO]] [[MORE]]').then(()=>done());
+				});
+
+				it('ShortcodeParserTag supplied to handler will have correct fullMatch value.', done=>{
+					const parser = Shortcode();
+
+					parser.add('TEST', tag=>assert.equal(tag.fullMatch, '[[TEST]]'));
+					parser.add('HELLO', tag=>assert.equal(tag.fullMatch, '[[HELLO test="test"]]'));
+					parser.add('MORE', tag=>assert.equal(tag.fullMatch, '[[MORE]]'));
+
+					parser.parse('[[TEST]] [[HELLO test="test"]] [[MORE]]').then(()=>done());
+				});
+
+				it('ShortcodeParserTag supplied to handler will have correct end value.', done=>{
+					const parser = Shortcode();
+
+					parser.add('TEST', tag=>assert.equal(tag.end, 8));
+					parser.add('HELLO', tag=>assert.equal(tag.end, 30));
+					parser.add('MORE', tag=>assert.equal(tag.end, 39));
+
+					parser.parse('[[TEST]] [[HELLO test="test"]] [[MORE]]').then(()=>done());
+				});
+
+				it('ShortcodeParserTag supplied to handler will have correct start value.', done=>{
+					const parser = Shortcode();
+
+					parser.add('TEST', tag=>assert.equal(tag.start, 0));
+					parser.add('HELLO', tag=>assert.equal(tag.start, 9));
+					parser.add('MORE', tag=>assert.equal(tag.start, 31));
+
+					parser.parse('[[TEST]] [[HELLO test="test"]] [[MORE]]').then(()=>done());
+				});
+
+				it('ShortcodeParserTag supplied to handler will have correct content value.', done=>{
+					const parser = Shortcode();
+
+					parser.add('TEST', tag=>assert.equal(tag.content, ''));
+					parser.add('HELLO', tag=>assert.equal(tag.content, 'HELLO WORLD'));
+					parser.add('MORE', tag=>assert.equal(tag.content, ''));
+
+					parser.parse('[[TEST]] [[HELLO test="test"]]HELLO WORLD[[/HELLO]] [[MORE]][[/MORE]').then(()=>done());
+				});
+
+				it('ShortcodeParserTag supplied to handler will ahave correct selfColosing value.', done=>{
+					// @todo actual self-closing tags not parsed correctly - ie [[TEST/]].
+
+					const parser = Shortcode();
+
+					parser.add('TEST', tag=>assert.isFalse(tag.selfClosing));
+					parser.add('HELLO', tag=>assert.isTrue(tag.selfClosing));
+					parser.add('MORE', tag=>assert.isTrue(tag.selfClosing));
+
+					parser.parse('[[TEST]]TEST[[/TEST]] [[HELLO test="test"]] [[MORE]]').then(()=>done());
+				});
 			});
 		});
 	});
