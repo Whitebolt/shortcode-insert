@@ -3,7 +3,15 @@
 const Promise = require('bluebird');
 const _ = require('lodash');
 const defaultOptions = {start:'[[', end:']]'};
-const _getAttributeRx = new RegExp('(\\S+)\\s*=\\s*([\'"])(.*?)\\2|(\\S+)\\s*=\\s*(.*?)(?:\s|$)|(\\S+)(?:\s|$)', 'g');
+
+const xGetAttributes = new RegExp('(\\S+)\\s*=\\s*([\'"])(.*?)\\2|(\\S+)\\s*=\\s*(.*?)(?:\s|$)|(\\S+)(?:\s|$)', 'g');
+const xGetTagAttributesText = '{start}.*?\\s(.*?){end}';
+const xTagMatch = '{start}.*?{end}';
+const xIsEndTag = '^{start}\/';
+const xGetTagName = '{start}(?:\/|)(.*?)(?:\\s|{end})';
+const xStart = /\{start\}/g;
+const xEnd = /\{end\}/g;
+
 
 function _addSlashToEachCharacter(txt) {
 	return txt.split('').map(char=>'\\'+char).join('');
@@ -16,7 +24,7 @@ function _getAttribute(getAttributes, tag) {
 	if (results) {
 		let result;
 		let count = 1;
-		while (result = _getAttributeRx.exec(results[1])) {
+		while (result = xGetAttributes.exec(results[1])) {
 			if (!result[6] && (result[1]||result[4])) {
 				attributes[result[1]||result[4]] = result[3]||result[5];
 			} else if (result[6]) {
@@ -29,16 +37,19 @@ function _getAttribute(getAttributes, tag) {
 	return attributes;
 }
 
-function _createRegEx(options) {
-	let start = _addSlashToEachCharacter(options.start);
-	let end = _addSlashToEachCharacter(options.end);
-	let _getAttributes = new RegExp(start+'.*?\\s(.*?)'+end);
+function _createRegExp(rx, start, end, options='') {
+	return new RegExp(rx
+		.replace(xStart, _addSlashToEachCharacter(start))
+		.replace(xEnd, _addSlashToEachCharacter(end)
+	), options);
+}
 
+function _createRegExpsObj(options) {
 	return {
-		tagMatch: new RegExp(start+'.*?'+end, 'g'),
-		isEndTag: new RegExp('^'+start+'\/'),
-		getTagName: new RegExp(start+'(?:\/|)(.*?)(?:\\s|'+end+')'),
-		getAttributes: _getAttribute.bind({}, _getAttributes)
+		tagMatch: _createRegExp(xTagMatch, options.start, options.end, 'g'),
+		isEndTag: _createRegExp(xIsEndTag, options.start, options.end),
+		getTagName: _createRegExp(xGetTagName, options.start, options.end),
+		getAttributes: _getAttribute.bind({}, _createRegExp(xGetTagAttributesText, options.start, options.end))
 	};
 }
 
@@ -75,12 +86,12 @@ function _filterOverlappingTags(tags) {
  * @class
  * @public
  * @param {Object} options		Options to ShortcodeParser function.
- * @returns {Object}			New instance of shortcode parser.
+ * @returns {ShortcodeParser}	New instance of shortcode parser.
  */
 function ShortcodeParser(options=defaultOptions) {
 	const _options = Object.assign({}, defaultOptions, options);
 	const tags = new Map();
-	const finder = _createRegEx(_options);
+	const finder = _createRegExpsObj(_options);
 
 	function _runHandlers(txt, tags, params) {
 		return Promise.all(tags.map(tag=>{
