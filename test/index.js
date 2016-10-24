@@ -7,7 +7,6 @@
 const packageInfo = require('../package.json');
 const jsDoc = require('./index.json');
 const Shortcode = require('../index.js');
-const expect = require('chai').expect;
 const assert = require('chai').assert;
 
 
@@ -20,16 +19,20 @@ const assert = require('chai').assert;
  * @returns {string}
  */
 function describeItem(items, itemName) {
-	if (itemName) return items[itemName].name + '(): ' + items[itemName].description;
-	return items.name + ': ' + items.description;
+	try {
+		if (itemName) return items[itemName].name + '(): ' + items[itemName].description;
+		return items.name + ': ' + items.description;
+	} catch(err) {
+		throw new SyntaxError('Could not find the requested item: ' + itemName);
+	}
 }
 
 
 describe(describeItem(packageInfo), ()=>{
-	describe(describeItem(jsDoc, 'create'), ()=>{
-		const parser = Shortcode.create();
+	describe(describeItem(jsDoc, 'ShortcodeParser()'), ()=>{
+		const parser = Shortcode();
 
-		it('It should create a shortcode parser object.', ()=>{
+		it('It should ShortcodeParser a shortcode parser object.', ()=>{
 			assert.isObject(parser);
 		});
 
@@ -54,9 +57,9 @@ describe(describeItem(packageInfo), ()=>{
 			assert.isFunction(parser.delete);
 		});
 
-		describe(describeItem(jsDoc, 'create~add'), ()=>{
+		describe(describeItem(jsDoc, 'ShortcodeParser.add'), ()=>{
 			it('add() should add a new handler and return the handler.', ()=>{
-				const parser = Shortcode.create();
+				const parser = Shortcode();
 				const handler = parser.add('TEST', ()=>'HELLO');
 
 				assert.isTrue(parser.has('TEST'));
@@ -67,36 +70,36 @@ describe(describeItem(packageInfo), ()=>{
 			});
 
 			it('add() should throw as default when adding handler, which already exists.', ()=>{
-				const parser = Shortcode.create();
+				const parser = Shortcode();
 				parser.add('TEST', ()=>'HELLO');
 				assert.throws(()=>parser.add('TEST', ()=>'HELLO2'), Error);
 				assert.throws(()=>parser.add('TEST', ()=>'HELLO2'), 'Tag \'TEST\' already exists');
 			});
 
 			it('add() should not throw when adding handler, if throwOnAlreadySet set to false.', ()=>{
-				const parser = Shortcode.create();
+				const parser = Shortcode();
 				parser.add('TEST', ()=>'HELLO');
 				assert.doesNotThrow(()=>parser.add('TEST', ()=>'HELLO2', false), Error);
 				assert.doesNotThrow(()=>parser.add('TEST', ()=>'HELLO2', false), 'Tag \'TEST\' already exists');
 			});
 
 			it('add() should not throw when adding handler, if throwOnAlreadySet set to true.', ()=>{
-				const parser = Shortcode.create();
+				const parser = Shortcode();
 				parser.add('TEST', ()=>'HELLO');
 				assert.throws(()=>parser.add('TEST', ()=>'HELLO2', true), Error);
 				assert.throws(()=>parser.add('TEST', ()=>'HELLO2', true), 'Tag \'TEST\' already exists');
 			});
 
 			it('add() should throw when trying to add a handler, which is not a function.', ()=>{
-				const parser = Shortcode.create();
+				const parser = Shortcode();
 				assert.throws(()=>parser.add('TEST', 'HELLO'), TypeError);
 				assert.throws(()=>parser.add('TEST', 'HELLO'), 'Cannot assign a non function as handler method for \'TEST\'');
 			});
 		});
 
-		describe(describeItem(jsDoc, 'create~get'), ()=>{
+		describe(describeItem(jsDoc, 'ShortcodeParser.get'), ()=>{
 			it('get() should return requested handler.', ()=>{
-				const parser = Shortcode.create();
+				const parser = Shortcode();
 				const handler = ()=>'HELLO';
 				parser.add('TEST', handler);
 
@@ -106,15 +109,15 @@ describe(describeItem(packageInfo), ()=>{
 			});
 
 			it('get() should throw if handler does not exist.', ()=>{
-				const parser = Shortcode.create();
+				const parser = Shortcode();
 				assert.throws(()=>parser.get('TEST'), RangeError);
 				assert.throws(()=>parser.get('TEST'), 'Tag \'TEST\' does not exist');
 			});
 		});
 
-		describe(describeItem(jsDoc, 'create~has'), ()=>{
+		describe(describeItem(jsDoc, 'ShortcodeParser.has'), ()=>{
 			it('has() test if a handler exists for given tag name.', ()=>{
-				const parser = Shortcode.create();
+				const parser = Shortcode();
 				parser.add('TEST', ()=>'HELLO');
 
 				assert.isTrue(parser.has('TEST'));
@@ -122,9 +125,9 @@ describe(describeItem(packageInfo), ()=>{
 			});
 		});
 
-		describe(describeItem(jsDoc, 'create~delete'), ()=>{
+		describe(describeItem(jsDoc, 'ShortcodeParser.delete'), ()=>{
 			it('delete() should delete the handler for given tag name.', ()=>{
-				const parser = Shortcode.create();
+				const parser = Shortcode();
 				parser.add('TEST', ()=>'HELLO');
 				assert.isTrue(parser.has('TEST'));
 				parser.delete('TEST');
@@ -132,7 +135,7 @@ describe(describeItem(packageInfo), ()=>{
 			});
 
 			it('delete() should throw if tag name does not exist.', ()=>{
-				const parser = Shortcode.create();
+				const parser = Shortcode();
 				assert.throws(()=>parser.get('TEST'), RangeError);
 				assert.throws(()=>parser.get('TEST'), 'Tag \'TEST\' does not exist');
 			});

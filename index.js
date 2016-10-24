@@ -72,11 +72,12 @@ function _filterOverlappingTags(tags) {
 /**
  * Create a new Shortcode parser instance.
  *
+ * @class
  * @public
- * @param {Object} options		Options to create function.
+ * @param {Object} options		Options to ShortcodeParser function.
  * @returns {Object}			New instance of shortcode parser.
  */
-function create(options=defaultOptions) {
+function ShortcodeParser(options=defaultOptions) {
 	const _options = Object.assign({}, defaultOptions, options);
 	const tags = new Map();
 	const finder = _createRegEx(_options);
@@ -120,6 +121,7 @@ function create(options=defaultOptions) {
 		 * Add a new handler to the parser for given tag name.
 		 *
 		 * @public
+		 * @memberof ShortcodeParser
 		 * @param {string} name							Tag name to set handler for.
 		 * @param {function} handler					Handler function to fire on tag.
 		 * @param {boolean} [throwOnAlreadySet=true]	Throw error if tage already exists?
@@ -136,6 +138,7 @@ function create(options=defaultOptions) {
 		 * Test if a handler for given tag name.
 		 *
 		 * @public
+		 * @memberof ShortcodeParser
 		 * @param {string} name		The tag to look for a handler on.
 		 * @returns {boolean}		Does it exist?
 		 */
@@ -145,6 +148,7 @@ function create(options=defaultOptions) {
 		 * Delete the handler for given tag name.
 		 *
 		 * @public
+		 * @memberof ShortcodeParser
 		 * @param {string} name		The tagname to delete the handler for.
 		 * @returns {boolean}
 		 */
@@ -157,6 +161,7 @@ function create(options=defaultOptions) {
 		 * Get the handler function for given tag name.
 		 *
 		 * @public
+		 * @memberof ShortcodeParser
 		 * @param {string} name	 	Tag name to get the handler for.
 		 * @returns {function}		The handler for the given tag name.
 		 */
@@ -179,6 +184,4 @@ function create(options=defaultOptions) {
 }
 
 
-module.exports = {
-	create
-};
+module.exports = ShortcodeParser
