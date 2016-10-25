@@ -1,6 +1,6 @@
 {
   "name": "shortcode-insert",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Shortcode parser, fully-programmable and asychronous. It can parse Wordpress shortcodes as well as embed and insert codes from other platforms.",
   "main": "index.js",
   "scripts": {
@@ -9,7 +9,7 @@
   "engines": ">=6.0.0",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/ssimpo/shortcode-insert.git"
+    "url": "git+https://github.com/whitebolt/shortcode-insert.git"
   },
   "keywords": [
     "Shortcode",
@@ -35,9 +35,9 @@
   ],
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/ssimpo/shortcode-insert/issues"
+    "url": "https://github.com/whitebolt/shortcode-insert/issues"
   },
-  "homepage": "https://github.com/ssimpo/shortcode-insert#readme",
+  "homepage": "https://github.com/whitebolt/shortcode-insert#readme",
   "dependencies": {
     "bluebird": "^3.4.6",
     "chai-as-promised": "^6.0.0",
