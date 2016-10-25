@@ -230,9 +230,41 @@ function _extractTagStrings(txt, finder) {
 function _parse(txt, finder, parserInstance) {
 	return _extractTagStrings(txt, finder).map(
 		result=>ShortcodeParserTag(finder, result)
-	).filter(
-		result=>parserInstance.has(result.tagName)
 	);
+}
+
+/**
+ *  @typedef ShortcodeParserReplacer
+ *  @property {string} replacer				Text to replace tag with.
+ *  @property {ShortcodeParserTag} tag		Tag to do replacement on.
+ */
+
+/**
+ * Apply a handler function to a given tag with supplied parameters.
+ *
+ * @private
+ * @param {Function} handler						Handler to apply.
+ * @param {ShortcodeParserTag} tag					Tag to apply handler to.
+ * @param {Array} params							Further parameters to pass
+ * 													to the handler.
+ * @returns {Promise.<ShortcodeParserReplacer>}
+ */
+function _applyHandler(handler, tag, params) {
+	return Promise.resolve(handler.apply({}, params) || '').then(replacer=>{
+		return {replacer, tag};
+	});
+}
+
+/**
+ * Test if given selector is selector for the given tag.
+ *
+ * @private
+ * @param {RegExp|Function} selector		Selector to test.
+ * @param {ShortcodeParserTag} tag			Tag to test against.
+ * @returns {boolean}
+ */
+function _isSelectorMatch(selector, tag) {
+	return ((_.isRegExp(selector) && selector.test(tag.fullMatch)) || (_.isFunction(selector) && selector(tag.fullMatch)));
 }
 
 /**
@@ -254,19 +286,28 @@ function ShortcodeParser(options = defaultOptions) {
 	 * @private
 	 * @param {string} txt						The full text containing the tags to
 	 *											do the replacements on.
-	 * @param {ShortcodeParserTag[]} tags		The tags to run handlers on.
+	 * @param {ShortcodeParserTag[]} _tags		The tags to run handlers on.
 	 * @param {Array} params					The parameters to pass on to the
 	 *											tag handlers.
 	 * @returns {Promise.<string>}				Promise resolving on completion of
 	 *											tag replacements.
 	 */
-	function _runHandlers(txt, tags, params) {
-		return Promise.all(tags.map(tag=> {
-			let handler = exports.get(tag.tagName).bind({}, tag);
-			return Promise.resolve(handler.apply({}, params) || '').then(replacer=> {
-				return {replacer, tag};
-			});
-		})).mapSeries(result=> {
+	function _runHandlers(txt, _tags, params) {
+		return Promise.all(_tags.map(tag=>{
+			let promise;
+			if (exports.has(tag.tagName)) {
+				let handler = exports.get(tag.tagName).bind({}, tag);
+				promise = _applyHandler(handler, tag, params);
+			} else {
+				tags.forEach((handler, selector)=>{
+					let _handler = handler.bind({}, tag);
+					if (!promise && _isSelectorMatch(selector, tag)) promise = _applyHandler(_handler, tag, params);
+				});
+			}
+			return promise;
+		})).filter(
+			result=>result
+		).mapSeries(result=>{
 			txt = txt.replace(result.tag.fullMatch, result.replacer);
 		}).then(()=>txt);
 	}
@@ -282,9 +323,10 @@ function ShortcodeParser(options = defaultOptions) {
 		 * @param {boolean} [throwOnAlreadySet=true]	Throw error if tage already exists?
 		 * @return {function}							The handler function returned.
 		 */
-		add: (name, handler, throwOnAlreadySet = true)=> {
+		add: (name, handler, throwOnAlreadySet=true)=> {
 			if (exports.has(name) && throwOnAlreadySet) throw new Error(`Tag '${name}' already exists`);
 			if (!_.isFunction(handler)) throw new TypeError(`Cannot assign a non function as handler method for '${name}'`);
+			if (!_.isString(name) && !_.isRegExp(name) && !_.isFunction(name)) throw new TypeError('Cannot add handler if the reference is not a string, regular expression or function. Reference of type: ' + (typeof name) + ', was given.');
 			tags.set(name, handler);
 			return exports.get(name);
 		},

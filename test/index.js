@@ -99,6 +99,28 @@ describe(describeItem(packageInfo), ()=>{
 				assert.throws(()=>parser.add('TEST', 'HELLO'), TypeError);
 				assert.throws(()=>parser.add('TEST', 'HELLO'), 'Cannot assign a non function as handler method for \'TEST\'');
 			});
+
+			it('add() should accept a name reference that is either a: string, function or regular expression.', ()=>{
+				const parser = Shortcode();
+				const errorMessage = 'Cannot add handler if the reference is not a string, regular expression or function. Reference of type: {type}, was given.';
+
+				['TEST', ()=>{}, /\n/].forEach(test=>{
+					let _errorMessage = errorMessage.replace('{type}', typeof test);
+					assert.doesNotThrow(()=>parser.add(test, ()=>{}, false), TypeError);
+					assert.doesNotThrow(()=>parser.add(test, ()=>{}, false), _errorMessage);
+				});
+			});
+
+			it('add() should throw when trying to add a handler with a reference that is neither a: string, function or regular expression.', ()=>{
+				const parser = Shortcode();
+				const errorMessage = 'Cannot add handler if the reference is not a string, regular expression or function. Reference of type: {type}, was given.';
+
+				[1, 1.7, [], {}, null, undefined, true, false].forEach(test=>{
+					let _errorMessage = errorMessage.replace('{type}', typeof test);
+					assert.throws(()=>parser.add(test, ()=>{}, false), TypeError);
+					assert.throws(()=>parser.add(test, ()=>{}, false), _errorMessage);
+				});
+			});
 		});
 
 		describe(describeItem(jsDoc, 'ShortcodeParser.get'), ()=>{
