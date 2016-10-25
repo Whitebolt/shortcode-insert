@@ -324,7 +324,7 @@ function ShortcodeParser(options = defaultOptions) {
 		 *
 		 * @public
 		 * @memberof ShortcodeParser
-		 * @param {string} name							Tag name to set handler for.
+		 * @param {string|Function|RegExp} name			Tag name to set handler for.
 		 * @param {function} handler					Handler function to fire on tag.
 		 * @param {boolean} [throwOnAlreadySet=true]	Throw error if tage already exists?
 		 * @return {function}							The handler function returned.
