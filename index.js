@@ -7,6 +7,7 @@ const defaultOptions = {start: '[[', end: ']]'};
 const xGetAttributes = new RegExp('(\\S+)\\s*=\\s*([\\\'\\"])(.*?)\\2|(\\S+)\\s*=\\s*(\\S+)|([^\\\'^\\"^\\s]+)(?:\\s|$)|([\\\'\\"])(.*?)\\7', 'g');
 
 const xGetTagAttributesText = '{start}.*?\\s(.*?){end}';
+const xStartTagContents = '{start}(.*){end}';
 const xTagMatch = '{start}.*?{end}';
 const xIsEndTag = '^{start}\/';
 const xGetTagName = '{start}(?:\/|)(.*?)(?:\\s|{end})';
@@ -17,12 +18,14 @@ const xEnd = /\{end\}/g;
  * @typedef ShortcodeParserFinder
  * Regular expressions object to use in extracting tag and tag-attribute data.
  *
- * @property {RegExp} tagMatch			Expression for extracting a tag.
- * @property {RegExp} isEndTag			Expression to test if a tag is an
- *										end tag
- * @property {RegExp} getTagName		Expression to extract the tag name.
- * @property {Function} getAttributes	Method to extract the attributes in a
- *										a given start tag string.
+ * @property {RegExp} tagMatch				Expression for extracting a tag.
+ * @property {RegExp} isEndTag				Expression to test if a tag is an
+ *											end tag
+ * @property {RegExp} getTagName			Expression to extract the tag name.
+ * @property {Function} getAttributes		Method to extract the attributes in
+ *											a given start tag string.
+ * @property {RegExp} getStartTagContent	Expression for extracting the
+ * 											contents of start tag.
  */
 
 
@@ -113,7 +116,8 @@ function _createRegExpsObj(options) {
 		tagMatch: _createRegExp(xTagMatch, options.start, options.end, 'g'),
 		isEndTag: _createRegExp(xIsEndTag, options.start, options.end),
 		getTagName: _createRegExp(xGetTagName, options.start, options.end),
-		getAttributes: _getAttribute.bind({}, _createRegExp(xGetTagAttributesText, options.start, options.end))
+		getAttributes: _getAttribute.bind({}, _createRegExp(xGetTagAttributesText, options.start, options.end)),
+		getStartTagContent: _createRegExp(xStartTagContents, options.start, options.end)
 	};
 }
 
@@ -174,6 +178,7 @@ function _filterOverlappingTags(tags) {
  * @property {string} content			The content of tag when their is
  *										an opening and closing tag.
  * @property {boolean} selfClosing		Is this a self-closing tag?
+ * @property {string} tagContents		Contents of starting tag.
  */
 
 /**
@@ -194,6 +199,7 @@ function ShortcodeParserTag(finder, result) {
 		start: result.lastIndex - result[0].length,
 		attributes: finder.getAttributes(result[0]),
 		content: '',
+		tagContents: finder.getStartTagContent.exec(result[0])[1],
 		selfClosing: true
 	};
 }
@@ -264,7 +270,7 @@ function _applyHandler(handler, tag, params) {
  * @returns {boolean}
  */
 function _isSelectorMatch(selector, tag) {
-	return ((_.isRegExp(selector) && selector.test(tag.fullMatch)) || (_.isFunction(selector) && selector(tag.fullMatch)));
+	return ((_.isRegExp(selector) && selector.test(tag.tagContents)) || (_.isFunction(selector) && selector(tag.tagContents)));
 }
 
 /**

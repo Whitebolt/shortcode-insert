@@ -8,7 +8,7 @@ const Promise = require('bluebird');
 const packageInfo = require('../package.json');
 const jsDoc = require('./index.json');
 const Shortcode = require('../index.js');
-const chai = require('chai')
+const chai = require('chai');
 const assert = chai.assert;
 
 chai.use(require("chai-as-promised"));
@@ -186,7 +186,6 @@ describe(describeItem(packageInfo), ()=>{
 				parser.add('OTHER', ()=>
 					assert.fail('[[TEST]]', '[[OTHER]]', 'Handlers should only fire if present in text.')
 				);
-
 				parser.parse('[[TEST]]').then(()=>done());
 			});
 
@@ -196,13 +195,65 @@ describe(describeItem(packageInfo), ()=>{
 
 				parser.add('TEST', tag=>{
 					testCount++;
-					assert.equal(tag.tagName, 'TEST')
+					assert.equal(tag.tagName, 'TEST');
 				});
 				parser.add('HELLO', tag=>assert.equal(tag.tagName, 'HELLO'));
 
 
 				parser.parse('[[TEST]] [[HELLO]] [[TEST]]').then(()=>{
 					assert.equal(testCount, 2);
+					done()
+				});
+			});
+
+			it('parse() will fire handler for regular expression selector matches.', done=>{
+				const parser = Shortcode();
+				let found = false;
+
+				parser.add(/.*\.pdf/, tag=>{
+					assert.equal(tag.tagContents, 'test.pdf');
+					found = true;
+				});
+
+				parser.parse('[[test.pdf]]').then(()=>{
+					assert.isTrue(found);
+					done()
+				});
+			});
+
+			it('parse() will fire handler for function selector matches.', done=>{
+				const parser = Shortcode();
+				let found = false;
+
+				parser.add(()=>true, tag=>{
+					assert.equal(tag.tagContents, 'test.pdf');
+					found = true;
+				});
+
+				parser.parse('[[test.pdf]]').then(()=>{
+					assert.isTrue(found);
+					done()
+				});
+			});
+
+			it('parse() will fire handler for named tag selector instead of functional or regular expression match if tag matches.', done=>{
+				const parser = Shortcode();
+				let found = false;
+
+				parser.add(/.*\.pdf/, tag=>{
+					assert.fail('TEST', '/.*\\.pdf/', 'Handlers should fire named tag matches before regular expression selectors.');
+				});
+
+				parser.add(()=>true, tag=>{
+					assert.fail('TEST', '/.*\\.pdf/', 'Handlers should fire named tag matches before functional selectors.');
+				});
+
+				parser.add('test.pdf', ()=>{
+					found = true;
+				});
+
+				parser.parse('[[test.pdf]]').then(()=>{
+					assert.isTrue(found);
 					done()
 				});
 			});
