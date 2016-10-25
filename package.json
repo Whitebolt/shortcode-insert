@@ -9,7 +9,7 @@
   "engines": ">=6.0.0",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/ssimpo/shortcode-parser.git"
+    "url": "git+https://github.com/ssimpo/shortcode-insert.git"
   },
   "keywords": [
     "Shortcode",
@@ -35,9 +35,9 @@
   ],
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/ssimpo/shortcode-parser/issues"
+    "url": "https://github.com/ssimpo/shortcode-insert/issues"
   },
-  "homepage": "https://github.com/ssimpo/shortcode-parser#readme",
+  "homepage": "https://github.com/ssimpo/shortcode-insert#readme",
   "dependencies": {
     "bluebird": "^3.4.6",
     "chai-as-promised": "^6.0.0",
