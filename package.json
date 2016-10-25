@@ -1,7 +1,7 @@
 {
-  "name": "shortcode-parser",
-  "version": "0.0.3",
-  "description": "Shortcode parser",
+  "name": "shortcode-insert",
+  "version": "1.0.0",
+  "description": "Shortcode parser, fully-programmable and asychronous. It can parse Wordpress shortcodes as well as embed and insert codes from other platforms.",
   "main": "index.js",
   "scripts": {
     "test": "./bin/test"
@@ -13,7 +13,11 @@
   },
   "keywords": [
     "Shortcode",
-    "RegEx"
+    "Async",
+    "Wordpress",
+    "RegExp",
+    "Embed",
+    "Template"
   ],
   "author": {
     "email": "hello@whitebolt.net",
