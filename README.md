@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.org/Whitebolt/shortcode-insert.svg?branch=master)](https://travis-ci.org/Whitebolt/shortcode-insert)
+
 # Shortcode Insert
 Shortcode parser to embed content into any text-string. The parser is fully-programmable and works asynchronously, using promises.
 
