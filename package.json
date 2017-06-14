@@ -1,6 +1,6 @@
 {
   "name": "shortcode-insert",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Shortcode parser, fully-programmable and asychronous. It can parse Wordpress shortcodes as well as embed and insert codes from other platforms.",
   "main": "index.js",
   "scripts": {
