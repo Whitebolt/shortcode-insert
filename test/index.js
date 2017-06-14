@@ -7,7 +7,7 @@
 const Promise = require('bluebird');
 const packageInfo = require('../package.json');
 const jsDoc = require('./index.json');
-const Shortcode = require('../index.js');
+const Shortcode = require('../');
 const chai = require('chai');
 const assert = chai.assert;
 
@@ -168,7 +168,7 @@ describe(describeItem(packageInfo), ()=>{
 		});
 
 		describe(describeItem(jsDoc, 'ShortcodeParser.parse'), ()=>{
-			it('parse() should return a promise a bluebird promise.', ()=>{
+			it('parse() should return a bluebird promise.', ()=>{
 				const parser = Shortcode();
 				assert.instanceOf(parser.parse(''), Promise);
 			});
