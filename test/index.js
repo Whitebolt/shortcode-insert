@@ -189,6 +189,22 @@ describe(describeItem(packageInfo), ()=>{
 				parser.parse('[[TEST]]').then(()=>done());
 			});
 
+			it('parse() should parse for tags that are loaded in the parser and leave others.', ()=>{
+				const parser = Shortcode({
+					start: '[',
+					end: ']'
+				});
+
+				parser.add('block_quote', tag=>{
+					return `<blockquote>${tag.content}</blockquote>`;
+				});
+
+				assert.eventually.equal(
+					parser.parse('[block_quote][Linked text](https://github.com).[/block_quote]'),
+					'<blockquote>[Linked text](https://github.com).</blockquote>'
+				);
+			});
+
 			it('parse() will fire handler for different tags in text.', done=>{
 				const parser = Shortcode();
 				let testCount = 0;
